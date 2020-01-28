@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Contador CAFI - Carteira de Análise Fundamentalista de Investimentos / Pense Rico
 // @namespace    http://tampermonkey.net/
-// @version      0.3
+// @version      0.4
 // @author       Vitor Subs
 // @description  Utilizado para calcular o número de votos da CAFI no portal Pense Rico
 // @match        https://forum.penserico.com/t/cafi-carteira-de-analise-fundamentalista-de-investimentos/*
@@ -38,8 +38,16 @@ function runPost(post, callback) {
   var text = post.find(".cooked")[0].innerHTML;
   var votes = text.match(/(\w{3,4}\d{1,2})/gi);
   if (votes && votes.length) {
+    debugger;
+    votes = votes.map(function(vote) {
+      return vote.toUpperCase();
+    });
+    votes = [...new Set(votes)];
+    if (votes.length > 10) {
+      votes = votes.slice(0, 8);
+    }
     for (let i = 0; i < votes.length; i++) {
-      let vote = votes[i].toUpperCase();
+      let vote = votes[i];
       if (!globalVotes[vote]) {
         globalVotes[vote] = 0;
       }
