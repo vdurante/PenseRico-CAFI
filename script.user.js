@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Contador CAFI - Carteira de Análise Fundamentalista de Investimentos / Pense Rico
 // @namespace    http://tampermonkey.net/
-// @version      0.4
+// @version      0.7
 // @author       Vitor Subs
 // @description  Utilizado para calcular o número de votos da CAFI no portal Pense Rico
 // @match        https://forum.penserico.com/t/cafi-carteira-de-analise-fundamentalista-de-investimentos/*
@@ -38,7 +38,6 @@ function runPost(post, callback) {
   var text = post.find(".cooked")[0].innerHTML;
   var votes = text.match(/(\w{3,4}\d{1,2})/gi);
   if (votes && votes.length) {
-    debugger;
     votes = votes.map(function(vote) {
       return vote.toUpperCase();
     });
@@ -57,18 +56,45 @@ function runPost(post, callback) {
 
   post.find(".cooked")[0].innerHTML = text.replace(
     /(\w{3,4}\d{1,2})/gi,
-    "<span style='color: green; font-size: 20px;'>$1</span>"
+    "<span style='color: green; font-size: 32px; white-space: pre; line-height:1.5em'>    $1    </span>"
   );
   $("html, body").animate({ scrollTop: post.offset().top - 75 }, 1000, null);
   var nextPost = post.nextAll().first();
   if (nextPost.length) {
     setTimeout(function() {
       runPost(nextPost, callback);
-    }, 2000);
+    }, 1000);
   } else {
     callback();
   }
 }
+function organizeVotes() {
+  let globalVotesArray = Object.keys(globalVotes)
+    .map(function(key, index) {
+      return { ticker: key, count: globalVotes[key] };
+    })
+    .sort(function(a, b) {
+      return b.count - a.count;
+    });
+  for (let i = globalVotesArray.length - 1; i >= 0; i--) {
+    var ticker = globalVotesArray[i].ticker.replace(/\d+$/, "");
+    let mainVote = globalVotesArray.find(function(vote) {
+      return vote.ticker.replace(/\d+$/, "") === ticker;
+    });
+    if (mainVote.ticker !== globalVotesArray[i].ticker) {
+      mainVote.count += globalVotesArray[i].count;
+    }
+  }
+  globalVotesArray = globalVotesArray.sort(function(a, b) {
+    return b.count - a.count;
+  });
+  let result = "";
+  for (let globalVote of globalVotesArray) {
+    result += globalVote.ticker + "\t" + globalVote.count + "\n";
+  }
+  $("#result").val(result);
+}
+
 function buildEvents() {
   $("#setup").click(function() {
     $(".topic-post").each(function(key, value) {
@@ -85,17 +111,13 @@ function buildEvents() {
   });
 
   $("#run").click(function() {
+    globalVotes = {};
     let selected = $(".cafi-checkbox:checked")
       .first()
       .parents(".topic-post")
       .first();
     runPost(selected, () => {
-      console.log(globalVotes);
-      result = "";
-      for (let vote in globalVotes) {
-        result += vote + "\t" + globalVotes[vote] + "\n";
-      }
-      $("#result").val(result);
+      organizeVotes();
     });
   });
 }
