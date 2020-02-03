@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Contador CAFI - Carteira de Análise Fundamentalista de Investimentos / Pense Rico
 // @namespace    http://tampermonkey.net/
-// @version      0.7
+// @version      0.8
 // @author       Vitor Subs
 // @description  Utilizado para calcular o número de votos da CAFI no portal Pense Rico
 // @match        https://forum.penserico.com/t/cafi-carteira-de-analise-fundamentalista-de-investimentos/*
@@ -9,6 +9,7 @@
 // ==/UserScript==
 
 var globalVotes = {};
+var personVotes = {};
 
 function buildInterface() {
   $("body").append(`
@@ -35,6 +36,7 @@ function runPost(post, callback) {
     .find(".cooked")
     .find(":not(p, ul, br, li, ol)")
     .remove();
+  let username = post.find(".username > a").text();
   var text = post.find(".cooked")[0].innerHTML;
   var votes = text.match(/(\w{3,4}\d{1,2})/gi);
   if (votes && votes.length) {
@@ -45,6 +47,12 @@ function runPost(post, callback) {
     if (votes.length > 10) {
       votes = votes.slice(0, 8);
     }
+    if (personVotes[username]) {
+      for (let i = 0; i < personVotes[username].length; i++) {
+        globalVotes[personVotes[username][i]] -= 1;
+      }
+    }
+    personVotes[username] = votes;
     for (let i = 0; i < votes.length; i++) {
       let vote = votes[i];
       if (!globalVotes[vote]) {
